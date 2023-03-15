@@ -1,0 +1,34 @@
+import CoreBluetooth
+
+# Define the UUID of the heart rate service and characteristic
+heart_rate_service_uuid = "180D"
+heart_rate_characteristic_uuid = "2A37"
+
+# Create a Bluetooth central manager to scan for and connect to devices
+central_manager = CoreBluetooth.CBCentralManager.alloc().initWithDelegate_options_(self, None)
+
+# Scan for devices advertising the heart rate service
+central_manager.scanForPeripheralsWithServices_options_(NSArray.arrayWithObject_(heart_rate_service_uuid), None)
+
+# When a device is discovered, connect to it and discover its services
+def centralManager_didDiscoverPeripheral_advertisementData_RSSI_(self, manager, peripheral, data, RSSI):
+    if peripheral.name() == "My Apple Watch":
+        central_manager.connectPeripheral_options_(peripheral, None)
+        peripheral.discoverServices_(NSArray.arrayWithObject_(heart_rate_service_uuid))
+
+# When the heart rate service is discovered, subscribe to its characteristic to receive data
+def peripheral_didDiscoverServices_(self, peripheral, error):
+    for service in peripheral.services():
+        if service.UUID().UUIDString() == heart_rate_service_uuid:
+            peripheral.discoverCharacteristics_forService_(NSArray.arrayWithObject_(heart_rate_characteristic_uuid), service)
+
+def peripheral_didDiscoverCharacteristicsForService_error_(self, peripheral, service, error):
+    for characteristic in service.characteristics():
+        if characteristic.UUID().UUIDString() == heart_rate_characteristic_uuid:
+            peripheral.setNotifyValue_forCharacteristic_(True, characteristic)
+
+# When heart rate data is received, transmit it to the hospital management system via Bluetooth
+def peripheral_didUpdateValueForCharacteristic_error_(self, peripheral, characteristic, error):
+    if characteristic.UUID().UUIDString() == heart_rate_characteristic_uuid:
+        heart_rate_data = characteristic.value()
+        transmit_to_hospital_management_system(heart_rate_data)
